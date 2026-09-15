@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Handjet:wght,ELSH@100..900,2&display=swap" rel="stylesheet">
+    <style>
+        html, body { margin: 0; padding: 0; overflow: hidden; background-color: rgb(235, 235, 220); }
+        canvas { display: block; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+</head>
+<body>
+<script>
+    let row = false;
+    let grid = [];
+    let newGrid = [];
+    let targetIndex = 0;
+    let start = -999;
+    let seconds = 0;
+    let gameWon = false;
+    let settings = false;
+    let question = false;
+    let finalTime = 0;
+
+    function setup(){
+        createCanvas(windowWidth, windowHeight);
+        textFont('Handjet'); 
+        textStyle(BOLD);
+        textAlign(CENTER, CENTER);
+        noStroke();
+    }
+
+    function windowResized(){
+        resizeCanvas(windowWidth, windowHeight);
+    }
+
+    function bgDesign(){
+        row = false;
+        fill(71, 58, 7);
+        for(let bgY=0; bgY<height; bgY+=60){
+            if(row){
+                for(let bgX=0; bgX<width; bgX+=120){ rect(bgX, bgY, 60, 60); }
+            } else {
+                for(let bgX=60; bgX<width; bgX+=120){ rect(bgX, bgY, 60, 60); }
+            }
+            row = !row;
+        }
+    }
+
+    function isSolved() {
+        if (grid.length === 0) return false;
+        return grid.every(color => color === grid[0]);
+    }
+
+    function makeGrid() {
+        gameWon = false;
+        const cols = 10;
+        const rows = 10;
+        const totalCells = cols * rows;
+        const colorNames = ["w", "g", "b"];
+        let validBoard = false;
+
+        while (!validBoard) {
+            const goalColor = floor(random(3));
+            const visits = Array(totalCells).fill(0);
+            let position = 0;
+            const scrambleLength = 600;
+
+            for (let step = 0; step < scrambleLength; step++) {
+                const c = position % cols;
+                const r = floor(position / cols);
+                const neighbors = [];
+
+                if (c > 0) neighbors.push(position - 1);
+                if (c < cols - 1) neighbors.push(position + 1);
+                if (r > 0) neighbors.push(position - cols);
+                if (r < rows - 1) neighbors.push(position + cols);
+
+                position = random(neighbors);
+                visits[position] = (visits[position] + 1) % 3;
+            }
+
+            grid = visits.map(visitCount => {
+                const startingColor = (goalColor - visitCount + 3) % 3;
+                return colorNames[startingColor];
+            });
+
+            validBoard = !isSolved();
+        }
+
+        targetIndex = 0;
+        start = -999;
+        seconds = 0;
+    }
+
+    function mousePressed(){
+        if(mouseX > width - 100 && mouseX < width - 50 && mouseY > 50 && mouseY < 100){
+            question = !question;
+        }
+    }
+
+    function draw(){
+        background(30);
+        bgDesign();
+
+        if(!question){
+            textStyle(BOLD);
+            if(gameWon){
+                fill(255,215,0);
+            } else {
+                fill(255);
+            }
+            textSize(80);
+            text("三 swap", width/2, 100);
+            
+            if(start > -100 && !gameWon){
+                seconds = round((millis() - start) / 1000, 2);
+            }
+            textSize(30);
+            textStyle(NORMAL);
+            text("seconds: " + (gameWon ? finalTime : seconds), width / 2, 160);
+
+            fill(20);
+            strokeWeight(4);
+            stroke(255);
+            rect(width-100, 50, 50, 50);
+            strokeWeight(1);
+            stroke(100);
+            fill(255);
+            text("?", width-75, 75);
+
+            if(grid.length == 0){
+                makeGrid();
+            } else {
+                let cols = 10;
+                let rows = 10;
+                let cellSize = 50;
+
+                let startX = (width - (cols * cellSize)) / 2;
+                let startY = (rows * cellSize) - 300;
+
+                let targetC = targetIndex % cols;
+                let targetR = floor(targetIndex / cols);
+
+                let pX = startX + (targetC * cellSize) + (cellSize / 2);
+                let pY = startY + (targetR * cellSize) + (cellSize / 2);
+
+                fill(120);
+                rect(startX-10, startY-10, cols*cellSize+20, rows*cellSize+20);
+
+                for(let i=0; i<grid.length; i++){
+                    let c = i % cols;
+                    let r = floor(i / cols);
+
+                    if(grid[i] === "g"){ fill(255,215,0); }
+                    else if(grid[i] === "b"){ fill(30,30,30); }
+                    else if(grid[i] === "w"){ fill(220,220,220); }
+                    rect(startX + c * cellSize, startY + r * cellSize, cellSize, cellSize);
+                }
+
+                fill(170,145,0);
+                strokeWeight(6);
+                stroke(151,118,16);
+                circle(pX, pY, 30);
+                noStroke();
+            }
+        } else {
+            fill(255);
+            textStyle(BOLD);
+            textSize(80);
+            text("How to play", width/2, 100);
+            
+            textStyle(NORMAL);
+            textSize(30);
+            text("A new board generates a 10 by 10 board that consists of colors\nBLACK, WHITE, GOLD.\n\nYou start on the top-left corner, and every move you make triggers the tile to change color, in this sequence:\n\n WHITE --> GOLD --> BLACK --> WHITE\n\nHave fun! :D\n\n @hoshi stardance hackclub", width/6, 140, 2*width/3, 500);
+
+            fill(20);
+            strokeWeight(4);
+            stroke(255);
+            rect(width-100, 50, 50, 50);
+
+            strokeWeight(1);
+            stroke(100);
+            fill(255);
+            text("↩", width-75, 75);
+            noStroke();
+        }
+    }
+
+    function keyPressed() {
+        if (gameWon) {
+            if (key === 'r' || key === 'R') {
+                makeGrid();
+            }
+            return;
+        }
+
+        const cols = 10;
+        const rows = 10;
+        const c = targetIndex % cols;
+        const r = floor(targetIndex / cols);
+        let moved = false;
+
+        function updateColor() {
+            if (grid[targetIndex] === "w") {
+                grid[targetIndex] = "g";
+            } else if (grid[targetIndex] === "g") {
+                grid[targetIndex] = "b";
+            } else {
+                grid[targetIndex] = "w";
+            }
+        }
+
+        if (keyCode === LEFT_ARROW && c > 0) {
+            targetIndex--;
+            moved = true;
+        } else if (keyCode === RIGHT_ARROW && c < cols - 1) {
+            targetIndex++;
+            moved = true;
+        } else if (keyCode === UP_ARROW && r > 0) {
+            targetIndex -= cols;
+            moved = true;
+        } else if (keyCode === DOWN_ARROW && r < rows - 1) {
+            targetIndex += cols;
+            moved = true;
+        }
+
+        if (!moved) return;
+
+        if (start < -100) {
+            start = millis();
+        }
+
+        updateColor();
+
+        if (isSolved()) {
+            seconds = round((millis() - start) / 1000, 2);
+            finalTime = seconds;
+            gameWon = true;
+        }
+    }
+</script>
+</body>
+</html>
